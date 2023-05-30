@@ -46,9 +46,9 @@ fn exti_to_clear(input: &[Ident]) -> Vec<TokenStream> {
 /// Creates the SLIC module with the proper interrupt sources.
 pub fn exti_mod(pac: &Ident, exti_handlers: &[Ident]) -> TokenStream {
     let n_exti_interrupts = exti_handlers.len();
-    if n_exti_interrupts == 0 {
-        return quote!(); // empty code block
-    }
+    //if n_exti_interrupts == 0 {
+    //    return quote!(); // empty code block
+    //}
     let exti_matches = exti_to_swi(pac, exti_handlers);
     let swi_matches = swi_to_exti(pac, exti_handlers);
     let exti_clear = exti_to_clear(exti_handlers);

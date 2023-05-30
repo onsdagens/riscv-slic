@@ -25,47 +25,93 @@ pub fn swi_mod(swi_handlers: &[Ident]) -> TokenStream {
     let swi_enums = interrupts_enum(swi_handlers);
     let u16_matches = u16_to_swi(swi_handlers);
 
-    quote!(
-        /// Enumeration of software interrupts
-        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-        #[repr(u16)]
-        pub enum Interrupt {
-            #(#swi_enums),*
-        }
-
-        unsafe impl riscv_slic::swi::InterruptNumber for Interrupt {
-            const MAX_INTERRUPT_NUMBER: u16 = #n_interrupts as u16 - 1;
-
-            fn number(self) -> u16 {
-                self as _
+    if swi_handlers.len() != 0{
+        quote!(
+            /// Enumeration of software interrupts
+            #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+            #[repr(u16)]
+            pub enum Interrupt {
+                #(#swi_enums),*
             }
 
-            fn try_from(value: u16) -> Result<Self, u16> {
-                match value {
-                    #(#u16_matches)*
-                    _ => Err(value),
+            unsafe impl riscv_slic::swi::InterruptNumber for Interrupt {
+                const MAX_INTERRUPT_NUMBER: u16 = #n_interrupts as u16 - 1;
+
+                fn number(self) -> u16 {
+                    self as _
+                }
+
+                fn try_from(value: u16) -> Result<Self, u16> {
+                    match value {
+                        #(#u16_matches)*
+                        _ => Err(value),
+                    }
                 }
             }
-        }
 
-        extern "C" {
-            #(fn #swi_handlers ();)*
-        }
-
-        #[no_mangle]
-        pub static __SOFTWARE_INTERRUPTS: [unsafe extern "C" fn(); #n_interrupts] = [
-            #(#swi_handlers),*
-        ];
-
-        pub static mut __SLIC: riscv_slic::SLIC<#n_interrupts> = riscv_slic::SLIC::new();
-
-        #[no_mangle]
-        #[allow(non_snake_case)]
-        pub unsafe fn MachineSoft() {
-            swi_clear(); // We clear the interrupt flag at the beginning to allow nested interrupts
-            while let Some((priority, interrupt)) = __SLIC.pop() {
-                riscv_slic::run(priority, || __SOFTWARE_INTERRUPTS[interrupt as usize]());
+            extern "C" {
+                #(fn #swi_handlers ();)*
             }
-        }
-    )
+
+            #[no_mangle]
+            pub static __SOFTWARE_INTERRUPTS: [unsafe extern "C" fn(); #n_interrupts] = [
+                #(#swi_handlers),*
+            ];
+
+            pub static mut __SLIC: riscv_slic::SLIC<#n_interrupts> = riscv_slic::SLIC::new();
+
+            #[no_mangle]
+            #[allow(non_snake_case)]
+            pub unsafe fn MachineSoft() {
+                swi_clear(); // We clear the interrupt flag at the beginning to allow nested interrupts
+                while let Some((priority, interrupt)) = __SLIC.pop() {
+                    riscv_slic::run(priority, || __SOFTWARE_INTERRUPTS[interrupt as usize]());
+                }
+            }
+        )
+    }
+    else{
+        quote!(
+            /// Enumeration of software interrupts
+            #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+            pub enum Interrupt {
+                #(#swi_enums),*
+            }
+
+            unsafe impl riscv_slic::swi::InterruptNumber for Interrupt {
+                const MAX_INTERRUPT_NUMBER: u16 = #n_interrupts as u16 - 1;
+
+                fn number(self) -> u16 {
+                    self as _
+                }
+
+                fn try_from(value: u16) -> Result<Self, u16> {
+                    match value {
+                        #(#u16_matches)*
+                        _ => Err(value),
+                    }
+                }
+            }
+
+            extern "C" {
+                #(fn #swi_handlers ();)*
+            }
+
+            #[no_mangle]
+            pub static __SOFTWARE_INTERRUPTS: [unsafe extern "C" fn(); #n_interrupts] = [
+                #(#swi_handlers),*
+            ];
+
+            pub static mut __SLIC: riscv_slic::SLIC<#n_interrupts> = riscv_slic::SLIC::new();
+
+            #[no_mangle]
+            #[allow(non_snake_case)]
+            pub unsafe fn MachineSoft() {
+                swi_clear(); // We clear the interrupt flag at the beginning to allow nested interrupts
+                while let Some((priority, interrupt)) = __SLIC.pop() {
+                    riscv_slic::run(priority, || __SOFTWARE_INTERRUPTS[interrupt as usize]());
+                }
+            }
+        )
+    }
 }

@@ -81,11 +81,9 @@ pub fn codegen(input: TokenStream) -> TokenStream {
 
     // Important: EXTI first for numeration in EXTI clear array!
     let swi_handlers: Vec<Ident> = [exti_handlers, swi_handlers].concat();
-    assert_ne!(swi_handlers.len(), 0);
-
     let swi_export = export::export_swi(&pac);
+    //assert_ne!(swi_handlers.len(), 0);
     let swi_code = swi::swi_mod(&swi_handlers);
-
     quote! {
         pub mod slic {
             #api_code
@@ -98,4 +96,7 @@ pub fn codegen(input: TokenStream) -> TokenStream {
         }
     }
     .into()
+
+
+
 }
